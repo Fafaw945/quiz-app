@@ -36,7 +36,11 @@ export default function Register() {
       }
 
       localStorage.setItem("participantId", data.id);
-      navigate("/quiz");
+      localStorage.setItem("pseudo", formData.pseudo);
+      localStorage.setItem("is_admin", data.is_admin ? "1" : "0");
+
+      // 🔹 Redirection vers le lobby
+      navigate("/lobby");
     } catch (err) {
       console.error(err);
       alert("Impossible de contacter le serveur.");
