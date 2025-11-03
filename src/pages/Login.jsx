@@ -2,10 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-// 1. Récupérer l'URL de l'API depuis les variables d'environnement
-// En production (Vercel), ce sera "https://quiz-api-79jx.onrender.com"
-// En local (via ton fichier .env), ce sera "http://localhost:8000"
-// (Utilisation de process.env, la méthode standard pour Create React App)
+// 1. Récupérer l'URL de l'API avec la syntaxe Create React App
 const API_URL = process.env.REACT_APP_API_URL;
 
 export default function Login() {
@@ -24,7 +21,7 @@ export default function Login() {
     }
 
     try {
-      // 2. Utiliser la variable API_URL au lieu de "localhost"
+      // 2. Utiliser la variable API_URL
       const res = await fetch(`${API_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -39,37 +36,24 @@ export default function Login() {
         return;
       }
 
-      if (!data.pseudo) { // Suppression de la vérification de participantId ici car il peut être créé après
+      if (!data.pseudo) { 
         alert("Erreur : pseudo reçu invalide.");
         console.error("Login data incorrect :", data);
         return;
       }
 
-      // 🚨 CORRECTION CRUCIALE : Réinitialisation avant la connexion pour éviter les conflits
-      // Si une session Admin était active, elle est effacée pour la nouvelle connexion.
       localStorage.removeItem("participantId"); 
       localStorage.removeItem("is_admin"); 
       
-      // 🔹 Stockage des nouvelles données dans localStorage
-      // On utilise l'ID du participant (si l'API le fournit, sinon il faudra le gérer)
       if (data.participantId) {
            localStorage.setItem("participantId", data.participantId);
-      } else {
-           // S'il n'y a pas d'ID unique, on utilise le pseudo pour identifier le joueur
-           // (Ceci est une mesure de sécurité si l'API ne retourne pas l'ID tout de suite)
-      }
-
+      } 
       localStorage.setItem("pseudo", data.pseudo);
-      
-      // 🚀 Logique Admin : On stocke la valeur exacte retournée par le serveur
-      // Si data.is_admin est undefined/null/false, cela stockera "0".
       localStorage.setItem("is_admin", data.is_admin ? "1" : "0");
 
-      // 🔹 Vérification
       console.log("LocalStorage pseudo :", localStorage.getItem("pseudo"));
       console.log("LocalStorage is_admin :", localStorage.getItem("is_admin"));
 
-      // 🔹 Redirection vers le lobby
       navigate("/lobby");
     } catch (err) {
       console.error("Erreur login :", err);

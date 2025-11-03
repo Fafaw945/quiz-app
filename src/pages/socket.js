@@ -1,8 +1,6 @@
 import { io } from "socket.io-client";
 
-// 1. Récupérer l'URL du WebSocket depuis les variables d'environnement
-// En production (Vercel), ce sera ton URL Render
-// En local, ce sera ton localhost:3001
+// 1. Récupérer l'URL du WebSocket avec la syntaxe Create React App
 const WS_URL = process.env.REACT_APP_WS_URL;
 
 // 2. Utiliser cette variable pour la connexion
