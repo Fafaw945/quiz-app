@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-// On remonte d'un dossier (pages -> src) pour trouver socket et audioManager
-import { socket } from "../socket"; 
+// 🚨 CORRECTION: Les chemins d'importation sont maintenant locaux au dossier 'pages'
+import { socket } from "./socket"; 
 import { playMusic, stopMusic } from '../audioManager';
 
 // ==========================================================
