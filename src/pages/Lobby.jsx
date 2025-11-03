@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-// On part de /src/pages/ pour aller à /src/
-import { socket } from "./socket"; 
-import { playMusic, stopMusic } from '../audioManager';
+// 🚨 CORRECTION FINALE DES CHEMINS (basée sur ta capture d'écran)
+import { socket } from "./socket"; // Il est dans le MÊME dossier 'pages'
+import { playMusic, stopMusic } from '../audioManager'; // Il est dans le dossier parent 'src'
 
 // ==========================================================
 // Composant 1: Le Mini-Jeu "Click & Catch"
@@ -136,8 +136,7 @@ const ReflexGame = () => {
 export default function Lobby() {
     const navigate = useNavigate();
     
-    // 🚨 On utilise useState pour pseudo et participantId
-    // Cela garantit que le composant ne lit qu'une seule fois au montage.
+    // On utilise useState pour pseudo et participantId
     const [pseudo] = useState(sessionStorage.getItem("pseudo"));
     const [participantId] = useState(sessionStorage.getItem("participantId")); 
 
@@ -145,23 +144,19 @@ export default function Lobby() {
     const [currentSocketId, setCurrentSocketId] = useState(null); 
 
     const handleReady = () => {
-        // Envoi de l'ID BDD au serveur Node.js quand on clique sur "Prêt"
         socket.emit("player_ready", { participantId: parseInt(participantId) }); 
     };
 
     const handleStartGame = () => {
-        // Envoi de l'ID BDD de l'admin au serveur Node.js
         socket.emit("start_game_request", { admin_id: parseInt(participantId) }); 
     };
 
-    // 🚨 useCallback pour stabiliser les fonctions pour le useEffect
     const setupLobbyListeners = useCallback(() => {
         const id = socket.id;
         setCurrentSocketId(id);
         
         console.log("Setup listeners pour socket ID:", id);
         
-        // Envoi des infos au socket lors de la connexion
         socket.emit("player_info", { 
             pseudo, 
             participantId: parseInt(participantId), 
@@ -182,7 +177,7 @@ export default function Lobby() {
         socket.on('error_message', (message) => {
             alert(`Erreur du serveur: ${message}`);
         });
-    }, [navigate, pseudo, participantId]); // Dépendances stables
+    }, [navigate, pseudo, participantId]);
 
     useEffect(() => {
         playMusic(); 
@@ -211,12 +206,9 @@ export default function Lobby() {
             socket.off("players_update");
             socket.off("game_start");
             socket.off('error_message');
-            // Optionnel : déconnecter si on quitte le lobby
-            // socket.disconnect(); 
         };
-    }, [navigate, setupLobbyListeners, pseudo, participantId]); // 🚨 setupLobbyListeners est maintenant stable
+    }, [navigate, setupLobbyListeners, pseudo, participantId]);
     
-    // 🚨 TOUTE LA LOGIQUE est maintenant basée sur l'état 'players'
     const currentPlayer = players.find(p => p.id === currentSocketId);
     const isCurrentPlayerAdmin = currentPlayer?.is_admin || false;
     const isMyStateReady = currentPlayer?.is_ready || false;
