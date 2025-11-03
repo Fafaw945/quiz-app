@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+// 1. Récupérer l'URL de l'API depuis les variables d'environnement
+// (Utilisation de process.env, la méthode standard pour Create React App)
+const API_URL = process.env.REACT_APP_API_URL;
+
 export default function Register() {
   const [formData, setFormData] = useState({
     name: "",
@@ -23,7 +27,8 @@ export default function Register() {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/register", {
+      // 2. Utiliser la variable API_URL au lieu de "localhost"
+      const res = await fetch(`${API_URL}/api/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -60,3 +65,4 @@ export default function Register() {
     </div>
   );
 }
+

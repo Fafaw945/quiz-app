@@ -2,6 +2,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+// 1. Récupérer l'URL de l'API depuis les variables d'environnement
+// En production (Vercel), ce sera "https://quiz-api-79jx.onrender.com"
+// En local (via ton fichier .env), ce sera "http://localhost:8000"
+// (Utilisation de process.env, la méthode standard pour Create React App)
+const API_URL = process.env.REACT_APP_API_URL;
+
 export default function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const navigate = useNavigate();
@@ -18,7 +24,8 @@ export default function Login() {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/login", {
+      // 2. Utiliser la variable API_URL au lieu de "localhost"
+      const res = await fetch(`${API_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -102,3 +109,4 @@ export default function Login() {
     </div>
   );
 }
+

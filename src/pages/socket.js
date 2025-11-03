@@ -1,10 +1,10 @@
-// src/socket.js
 import { io } from "socket.io-client";
 
-// 🚨 CORRECTION : autoConnect: false. La connexion sera lancée manuellement dans Lobby.jsx.
-export const socket = io("http://localhost:8001", {
-  transports: ["websocket"],
-  autoConnect: false,
+//  Mise à jour de l'URL du serveur Socket.io en production (Heroku)
+
+export const socket = io("https://quiz-socket-304bcba7a1ee.herokuapp.com/", {
+  transports: ["websocket"],
+  autoConnect: false,
 });
 
 // NOTE : Les logs de connect/disconnect sont gérés dans Lobby.jsx pour plus de contrôle.
