@@ -1,14 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-// 🚨 CORRECTION: Les chemins d'importation sont maintenant locaux au dossier 'pages'
-import { socket } from "./socket"; 
+// On part de /src/pages/ pour aller à /src/
+import { socket } from "../socket"; 
 import { playMusic, stopMusic } from '../audioManager';
 
 // ==========================================================
 // Composant 1: Le Mini-Jeu "Click & Catch"
 // ==========================================================
 const ReflexGame = () => {
-    // ... (le code du mini-jeu est correct et reste le même) ...
     const [gameState, setGameState] = useState('start'); // 'start', 'wait', 'catch', 'result'
     const [startTime, setStartTime] = useState(null);
     const [reactionTime, setReactionTime] = useState(null);
@@ -137,9 +136,10 @@ const ReflexGame = () => {
 export default function Lobby() {
     const navigate = useNavigate();
     
-    // Lire depuis sessionStorage (ceci est correct)
-    const pseudo = sessionStorage.getItem("pseudo");
-    const participantId = sessionStorage.getItem("participantId"); 
+    // 🚨 On utilise useState pour pseudo et participantId
+    // Cela garantit que le composant ne lit qu'une seule fois au montage.
+    const [pseudo] = useState(sessionStorage.getItem("pseudo"));
+    const [participantId] = useState(sessionStorage.getItem("participantId")); 
 
     const [players, setPlayers] = useState([]);
     const [currentSocketId, setCurrentSocketId] = useState(null); 
@@ -154,10 +154,12 @@ export default function Lobby() {
         socket.emit("start_game_request", { admin_id: parseInt(participantId) }); 
     };
 
-
-    const setupLobbyListeners = () => {
+    // 🚨 useCallback pour stabiliser les fonctions pour le useEffect
+    const setupLobbyListeners = useCallback(() => {
         const id = socket.id;
         setCurrentSocketId(id);
+        
+        console.log("Setup listeners pour socket ID:", id);
         
         // Envoi des infos au socket lors de la connexion
         socket.emit("player_info", { 
@@ -167,10 +169,12 @@ export default function Lobby() {
         }); 
         
         socket.on("players_update", (playersData) => {
+            console.log("Reçu players_update:", playersData);
             setPlayers(playersData);
         });
 
         socket.on("game_start", () => {
+            console.log("Événement 'game_start' reçu, navigation vers /quiz");
             stopMusic(); 
             navigate("/quiz"); 
         });
@@ -178,15 +182,12 @@ export default function Lobby() {
         socket.on('error_message', (message) => {
             alert(`Erreur du serveur: ${message}`);
         });
-    }
+    }, [navigate, pseudo, participantId]); // Dépendances stables
 
     useEffect(() => {
         playMusic(); 
         
-        const storedPseudo = sessionStorage.getItem("pseudo");
-        const storedParticipantId = sessionStorage.getItem("participantId");
-
-        if (!storedPseudo || !storedParticipantId) {
+        if (!pseudo || !participantId) {
             console.log("Pas de session, redirection vers login...");
             navigate("/");
             return;
@@ -197,10 +198,7 @@ export default function Lobby() {
             socket.connect(); 
         }
 
-        socket.on("connect", () => {
-            console.log("Socket connecté ! ID:", socket.id);
-            setupLobbyListeners();
-        });
+        socket.on("connect", setupLobbyListeners);
         
         if (socket.connected) {
             console.log("Socket déjà connecté, setup des listeners.");
@@ -213,16 +211,17 @@ export default function Lobby() {
             socket.off("players_update");
             socket.off("game_start");
             socket.off('error_message');
+            // Optionnel : déconnecter si on quitte le lobby
+            // socket.disconnect(); 
         };
-    }, [navigate]); // 'navigate' est une dépendance stable
+    }, [navigate, setupLobbyListeners, pseudo, participantId]); // 🚨 setupLobbyListeners est maintenant stable
     
-    const readyCount = players.filter((p) => p.is_ready).length;
+    // 🚨 TOUTE LA LOGIQUE est maintenant basée sur l'état 'players'
     const currentPlayer = players.find(p => p.id === currentSocketId);
     const isCurrentPlayerAdmin = currentPlayer?.is_admin || false;
     const isMyStateReady = currentPlayer?.is_ready || false;
     
-    const allPlayersReady = players.every(p => p.is_ready);
-    // L'admin peut lancer si 2+ joueurs ET tout le monde est prêt
+    const allPlayersReady = players.length > 0 && players.every(p => p.is_ready);
     const canAdminStart = players.length >= 2 && allPlayersReady; 
 
     return (
@@ -241,7 +240,7 @@ export default function Lobby() {
                         Joueurs connectés ({players.length})
                     </h2>
                     <p className="text-sm text-gray-400 mb-4">
-                        Prêts : <span className="font-semibold text-green-400">{readyCount}</span> / {players.length}
+                        Prêts : <span className="font-semibold text-green-400">{players.filter(p => p.is_ready).length}</span> / {players.length}
                     </p>
                     
                     <ul className="space-y-3 mb-6">
@@ -262,10 +261,8 @@ export default function Lobby() {
                         ))}
                     </ul>
 
-                    {/* 🚨 ZONE D'ACTION CORRIGÉE 🚨 */}
+                    {/* Zone d'action */}
                     <div className="mt-6 border-t pt-4 border-gray-700">
-                        
-                        {/* --- Bloc pour TOUS les joueurs --- */}
                         
                         {/* Si JE ne suis PAS prêt, montrer le bouton "Prêt" */}
                         {!isMyStateReady && (
@@ -284,8 +281,7 @@ export default function Lobby() {
                             </p>
                         )}
 
-                        {/* --- Bloc SUPPLÉMENTAIRE pour l'ADMIN --- */}
-                        
+                        {/* Bloc SUPPLÉMENTAIRE pour l'ADMIN */}
                         {isCurrentPlayerAdmin && (
                             <div className="mt-4 text-center border-t border-gray-700 pt-4">
                                 <button
@@ -295,7 +291,6 @@ export default function Lobby() {
                                         !canAdminStart ? "bg-red-500/50 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"
                                     }`}
                                 >
-                                    {/* 🚨 LOGIQUE DE TEXTE CORRIGÉE 🚨 */}
                                     {players.length < 2 ? "Il faut au moins 2 joueurs" : (allPlayersReady ? "Lancer la Partie Maintenant !" : "Tous les joueurs doivent être prêts")}
                                 </button>
                                 {!canAdminStart && players.length >= 2 && (
