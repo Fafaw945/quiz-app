@@ -21,7 +21,6 @@ export default function Login() {
     }
 
     try {
-      // 2. Utiliser la variable API_URL
       const res = await fetch(`${API_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -42,17 +41,20 @@ export default function Login() {
         return;
       }
 
-      localStorage.removeItem("participantId"); 
-      localStorage.removeItem("is_admin"); 
+      // 🚨 CORRECTION : Utiliser sessionStorage au lieu de localStorage
+      // On efface d'abord au cas où quelque chose restait
+      sessionStorage.removeItem("participantId"); 
+      sessionStorage.removeItem("is_admin"); 
+      sessionStorage.removeItem("pseudo");
       
       if (data.participantId) {
-           localStorage.setItem("participantId", data.participantId);
+           sessionStorage.setItem("participantId", data.participantId);
       } 
-      localStorage.setItem("pseudo", data.pseudo);
-      localStorage.setItem("is_admin", data.is_admin ? "1" : "0");
+      sessionStorage.setItem("pseudo", data.pseudo);
+      sessionStorage.setItem("is_admin", data.is_admin ? "1" : "0");
 
-      console.log("LocalStorage pseudo :", localStorage.getItem("pseudo"));
-      console.log("LocalStorage is_admin :", localStorage.getItem("is_admin"));
+      console.log("sessionStorage pseudo :", sessionStorage.getItem("pseudo"));
+      console.log("sessionStorage is_admin :", sessionStorage.getItem("is_admin"));
 
       navigate("/lobby");
     } catch (err) {
