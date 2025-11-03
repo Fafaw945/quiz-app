@@ -39,9 +39,10 @@ export default function Register() {
         return;
       }
 
-      localStorage.setItem("participantId", data.id);
-      localStorage.setItem("pseudo", formData.pseudo);
-      localStorage.setItem("is_admin", data.is_admin ? "1" : "0");
+      // 🚨 CORRECTION : Utiliser sessionStorage au lieu de localStorage
+      sessionStorage.setItem("participantId", data.id);
+      sessionStorage.setItem("pseudo", formData.pseudo);
+      sessionStorage.setItem("is_admin", data.is_admin ? "1" : "0");
 
       navigate("/lobby");
     } catch (err) {

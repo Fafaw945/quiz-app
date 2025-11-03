@@ -16,7 +16,6 @@ const ReflexGame = () => {
     const MAX_DELAY = 4000; // 4 secondes
 
     const startGame = useCallback(() => {
-        // Nettoyage en cas de double-clic ou de bug
         if (timeoutId) {
             clearTimeout(timeoutId);
         }
@@ -26,40 +25,31 @@ const ReflexGame = () => {
 
         const delay = Math.floor(Math.random() * (MAX_DELAY - MIN_DELAY)) + MIN_DELAY;
 
-        // Démarre un compte à rebours aléatoire avant de passer à l'état 'catch'
         const id = setTimeout(() => {
             setGameState('catch');
-            setStartTime(performance.now()); // Démarre le chronomètre
+            setStartTime(performance.now()); 
         }, delay);
 
         setTimeoutId(id);
     }, [timeoutId]);
 
-    // Gère le clic du joueur
     const handleClick = useCallback(() => {
         if (gameState === 'wait') {
-            // Clic trop tôt !
             clearTimeout(timeoutId);
-            setReactionTime(0); // Temps de réaction de 0 pour signaler le faux départ
+            setReactionTime(0); 
             setGameState('result');
-            // MODIFICATION: Suppression du redémarrage automatique ici.
             
         } else if (gameState === 'catch') {
-            // Clic réussi
             const endTime = performance.now();
             const time = endTime - startTime;
             setReactionTime(Math.round(time));
             setGameState('result');
-            // MODIFICATION: Suppression du redémarrage automatique ici.
 
         } else if (gameState === 'start' || gameState === 'result') {
-            // Le joueur a cliqué sur le bouton de démarrage ou le résultat
-            // Cela relance le jeu
             startGame();
         }
     }, [gameState, startTime, timeoutId, startGame]);
 
-    // Nettoyage des timers lors du démontage
     useEffect(() => {
         return () => {
             if (timeoutId) {
@@ -68,7 +58,6 @@ const ReflexGame = () => {
         };
     }, [timeoutId]);
 
-    // Contenu affiché dans la zone de jeu
     let buttonClass = "w-full h-full rounded-2xl shadow-xl transition-all duration-100 ease-in-out";
     let message;
 
@@ -86,7 +75,6 @@ const ReflexGame = () => {
             message = "CLIQUEZ MAINTENANT !";
             break;
         case 'result':
-            // Rendre le bouton cliquable visuellement pour le rejeu
             buttonClass += " cursor-pointer transform hover:scale-[1.01]"; 
             if (reactionTime === 0) {
                 buttonClass += " bg-red-500 hover:bg-red-600";
@@ -101,8 +89,6 @@ const ReflexGame = () => {
             message = "Appuyez pour commencer";
     }
 
-    // Le contenu du message peut être un React Fragment pour une meilleure mise en forme si nécessaire, 
-    // mais ici, nous utilisons une simple chaîne de caractères pour la simplicité.
     return (
         <div className="mt-8 p-4 bg-gray-800 rounded-3xl shadow-2xl w-full max-w-lg mx-auto text-center border-b-4 border-l-4 border-yellow-500">
             <h3 className="text-xl font-bold text-yellow-400 mb-4">
@@ -112,18 +98,14 @@ const ReflexGame = () => {
                 En attendant les autres, testez votre temps de réaction !
             </p>
             <div 
-                // La div entière agit comme un bouton
                 className={`h-48 cursor-pointer overflow-hidden flex items-center justify-center ${buttonClass}`}
                 onClick={handleClick}
             >
-                {/* Condition pour adapter l'affichage du message de résultat/relance */}
                 <div className="text-white text-2xl font-extrabold p-4">
-                    {/* Affichage adapté pour le résultat */}
                     {gameState === 'result' ? (
                         <div className="flex flex-col items-center">
                             <p className="mb-2 text-xl md:text-2xl font-bold">{reactionTime === 0 ? "Trop tôt ! ❌" : `Réaction : ${reactionTime} ms ! ✅`}</p>
                             <button
-                                // Cette sous-bouton est purement visuel car le clic est géré par la div parente
                                 className="mt-2 bg-indigo-700 hover:bg-indigo-600 text-white text-base py-2 px-4 rounded-lg shadow-md transition-colors"
                             >
                                 Rejouer
@@ -153,19 +135,22 @@ const ReflexGame = () => {
 export default function Lobby() {
     const navigate = useNavigate();
     
-    const pseudo = localStorage.getItem("pseudo");
-    // 🔑 Récupération de l'ID BDD
-    const participantId = localStorage.getItem("participantId"); 
+    // 🚨 CORRECTION : Lire depuis sessionStorage
+    const pseudo = sessionStorage.getItem("pseudo");
+    const participantId = sessionStorage.getItem("participantId"); 
 
     const [players, setPlayers] = useState([]);
     const [currentSocketId, setCurrentSocketId] = useState(null); 
 
     const handleReady = () => {
-        socket.emit("player_ready");
+        // 🔑 Envoi de l'ID BDD au serveur Node.js quand on clique sur "Prêt"
+        // (Il faut s'assurer que le serveur WebSocket gère cet événement "player_ready")
+        socket.emit("player_ready", { participantId });
     };
 
     const handleStartGame = () => {
-        socket.emit("start_game");
+        // 🔑 Envoi de l'ID BDD de l'admin au serveur Node.js
+        socket.emit("start_game_request", { admin_id: participantId });
     };
 
 
@@ -173,8 +158,12 @@ export default function Lobby() {
         const id = socket.id;
         setCurrentSocketId(id);
         
-        // 🔑 Envoi de l'ID BDD au serveur Node.js
-        socket.emit("join_lobby", { pseudo, participantId }); 
+        // 🔑 Envoi de l'ID BDD (participantId) lors de la connexion
+        socket.emit("player_info", { 
+            pseudo, 
+            participantId, 
+            is_admin: sessionStorage.getItem("is_admin") === "1" // 🚨 CORRECTION
+        }); 
         
         socket.on("players_update", (playersData) => {
             setPlayers(playersData);
@@ -189,8 +178,11 @@ export default function Lobby() {
     useEffect(() => {
         playMusic(); 
         
-        // Contrôle de sécurité
-        if (!pseudo || !participantId) {
+        // 🚨 CORRECTION : Vérifier le pseudo et l'ID depuis sessionStorage
+        const storedPseudo = sessionStorage.getItem("pseudo");
+        const storedParticipantId = sessionStorage.getItem("participantId");
+
+        if (!storedPseudo || !storedParticipantId) {
             navigate("/");
             return;
         }
@@ -209,13 +201,23 @@ export default function Lobby() {
             socket.off("connect", setupLobbyListeners);
             socket.off("players_update");
             socket.off("game_start");
+            // Ne pas déconnecter le socket ici, le laisser persister
         };
-    }, [pseudo, participantId, navigate]); 
+    // 🚨 CORRECTION : Retirer pseudo et participantId des dépendances, 
+    // car ils sont lus une seule fois au montage.
+    }, [navigate]); 
     
-    const readyCount = players.filter((p) => p.ready).length;
-    const isCurrentPlayerAdmin = players.find(p => p.id === currentSocketId)?.is_admin || false;
-    const isMyStateReady = players.find(p => p.id === currentSocketId)?.ready || false;
-    const canAdminStart = players.length >= 2 && readyCount === players.length;
+    const readyCount = players.filter((p) => p.is_ready).length; // 🚨 CORRECTION : p.is_ready
+    const currentPlayer = players.find(p => p.id === currentSocketId);
+    const isCurrentPlayerAdmin = currentPlayer?.is_admin || false;
+    const isMyStateReady = currentPlayer?.is_ready || false; // 🚨 CORRECTION : p.is_ready
+    
+    // 🚨 CORRECTION : Logique admin
+    // L'admin doit-il être "prêt" ? Si oui, canAdminStart est correct.
+    // Si l'admin n'a pas besoin d'être "prêt" (ce qui est le cas dans ton server.js) :
+    const allPlayersReady = players.every(p => p.is_ready);
+    // On vérifie qu'il y a au moins 2 joueurs (l'admin inclus) ET que tout le monde est prêt
+    const canAdminStart = players.length >= 2 && allPlayersReady; 
 
     return (
         <div className="flex flex-col items-center min-h-screen bg-gray-900 text-white p-4">
@@ -241,7 +243,7 @@ export default function Lobby() {
                             <li
                                 key={p.id} 
                                 className={`flex justify-between items-center p-3 rounded-lg font-medium transition duration-200 ${
-                                    p.ready ? "bg-green-900 border border-green-700" : "bg-gray-700 border border-gray-600"
+                                    p.is_ready ? "bg-green-900 border border-green-700" : "bg-gray-700 border border-gray-600"
                                 } ${p.id === currentSocketId ? "ring-2 ring-yellow-500 scale-[1.02]" : ""}`}
                             >
                                 <span className="truncate">
@@ -249,7 +251,7 @@ export default function Lobby() {
                                     {p.is_admin && <span className="ml-2 text-red-400 font-extrabold">(ADMIN)</span>}
                                     {p.id === currentSocketId && <span className="ml-1 text-xs text-yellow-500">(Moi)</span>}
                                 </span>
-                                <span>{p.ready ? "✅ Prêt" : "❌ Pas prêt"}</span>
+                                <span>{p.is_ready ? "✅ Prêt" : "❌ Pas prêt"}</span>
                             </li>
                         ))}
                     </ul>
