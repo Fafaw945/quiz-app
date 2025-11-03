@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 // On part de /src/pages/ pour aller à /src/
-import { socket } from "../socket"; 
+import { socket } from "./socket"; 
 import { playMusic, stopMusic } from '../audioManager';
 
 // ==========================================================
