@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { socket } from "./socket"; 
+// 🚨 CORRECTION: Les chemins d'importation pointent maintenant vers le dossier parent 'src/'
+import { socket } from "../socket"; 
 import { playMusic, stopMusic } from '../audioManager';
 
 // ==========================================================
@@ -135,7 +136,7 @@ const ReflexGame = () => {
 export default function Lobby() {
     const navigate = useNavigate();
     
-    // 🚨 CORRECTION : Lire depuis sessionStorage
+    // Lire depuis sessionStorage (ceci est correct)
     const pseudo = sessionStorage.getItem("pseudo");
     const participantId = sessionStorage.getItem("participantId"); 
 
@@ -143,14 +144,13 @@ export default function Lobby() {
     const [currentSocketId, setCurrentSocketId] = useState(null); 
 
     const handleReady = () => {
-        // 🔑 Envoi de l'ID BDD au serveur Node.js quand on clique sur "Prêt"
-        // (Il faut s'assurer que le serveur WebSocket gère cet événement "player_ready")
-        socket.emit("player_ready", { participantId });
+        // Envoi de l'ID BDD au serveur Node.js quand on clique sur "Prêt"
+        socket.emit("player_ready", { participantId: parseInt(participantId) }); // Assurons-nous que c'est un nombre
     };
 
     const handleStartGame = () => {
-        // 🔑 Envoi de l'ID BDD de l'admin au serveur Node.js
-        socket.emit("start_game_request", { admin_id: participantId });
+        // Envoi de l'ID BDD de l'admin au serveur Node.js
+        socket.emit("start_game_request", { admin_id: parseInt(participantId) }); // Assurons-nous que c'est un nombre
     };
 
 
@@ -158,11 +158,11 @@ export default function Lobby() {
         const id = socket.id;
         setCurrentSocketId(id);
         
-        // 🔑 Envoi de l'ID BDD (participantId) lors de la connexion
+        // Envoi des infos au socket lors de la connexion
         socket.emit("player_info", { 
             pseudo, 
-            participantId, 
-            is_admin: sessionStorage.getItem("is_admin") === "1" // 🚨 CORRECTION
+            participantId: parseInt(participantId), 
+            is_admin: sessionStorage.getItem("is_admin") === "1"
         }); 
         
         socket.on("players_update", (playersData) => {
@@ -178,7 +178,6 @@ export default function Lobby() {
     useEffect(() => {
         playMusic(); 
         
-        // 🚨 CORRECTION : Vérifier le pseudo et l'ID depuis sessionStorage
         const storedPseudo = sessionStorage.getItem("pseudo");
         const storedParticipantId = sessionStorage.getItem("participantId");
 
@@ -201,22 +200,16 @@ export default function Lobby() {
             socket.off("connect", setupLobbyListeners);
             socket.off("players_update");
             socket.off("game_start");
-            // Ne pas déconnecter le socket ici, le laisser persister
         };
-    // 🚨 CORRECTION : Retirer pseudo et participantId des dépendances, 
-    // car ils sont lus une seule fois au montage.
-    }, [navigate]); 
+    }, [navigate]); // Retiré pseudo et participantId des dépendances
     
-    const readyCount = players.filter((p) => p.is_ready).length; // 🚨 CORRECTION : p.is_ready
+    const readyCount = players.filter((p) => p.is_ready).length;
     const currentPlayer = players.find(p => p.id === currentSocketId);
     const isCurrentPlayerAdmin = currentPlayer?.is_admin || false;
-    const isMyStateReady = currentPlayer?.is_ready || false; // 🚨 CORRECTION : p.is_ready
+    const isMyStateReady = currentPlayer?.is_ready || false;
     
-    // 🚨 CORRECTION : Logique admin
-    // L'admin doit-il être "prêt" ? Si oui, canAdminStart est correct.
-    // Si l'admin n'a pas besoin d'être "prêt" (ce qui est le cas dans ton server.js) :
     const allPlayersReady = players.every(p => p.is_ready);
-    // On vérifie qu'il y a au moins 2 joueurs (l'admin inclus) ET que tout le monde est prêt
+    // 🚨 CORRECTION LOGIQUE: L'admin peut lancer si 2+ joueurs ET tout le monde est prêt
     const canAdminStart = players.length >= 2 && allPlayersReady; 
 
     return (
@@ -230,6 +223,7 @@ export default function Lobby() {
             <main className="w-full max-w-4xl flex flex-col md:flex-row gap-8">
                 
                 {/* Colonne de la liste des joueurs et du contrôle (Gauche) */}
+                {/* 🚨 CORRECTION: La classe était cassée, maintenant "md:w-1/2" */}
                 <div className="md:w-1/2 w-full bg-gray-800 p-6 rounded-2xl shadow-2xl border-t-4 border-blue-500">
                     <h2 className="text-2xl font-bold mb-4 text-blue-300">
                         Joueurs connectés ({players.length})
@@ -256,10 +250,13 @@ export default function Lobby() {
                         ))}
                     </ul>
 
-                    {/* Zone d'action */}
+                    {/* 🚨 ZONE D'ACTION CORRIGÉE 🚨 */}
                     <div className="mt-6 border-t pt-4 border-gray-700">
-                        {/* Affichage du bouton "Je suis prêt" */}
-                        {!isMyStateReady && !isCurrentPlayerAdmin && (
+                        
+                        {/* --- Bloc pour TOUS les joueurs --- */}
+                        
+                        {/* Si JE ne suis PAS prêt, montrer le bouton "Prêt" */}
+                        {!isMyStateReady && (
                             <button
                                 onClick={handleReady}
                                 className="w-full bg-green-600 text-white px-6 py-3 rounded-xl text-lg font-semibold hover:bg-green-700 transition transform hover:scale-105 shadow-lg"
@@ -268,16 +265,17 @@ export default function Lobby() {
                             </button>
                         )}
                         
-                        {/* Message d'attente */}
-                        {isMyStateReady && !isCurrentPlayerAdmin && (
+                        {/* Si JE suis prêt, montrer le message d'attente */}
+                        {isMyStateReady && (
                             <p className="text-center p-3 text-lg font-semibold text-green-500 bg-green-900/50 rounded-lg">
-                                ✅ En attente de l'administrateur pour commencer.
+                                ✅ Vous êtes prêt ! En attente des autres...
                             </p>
                         )}
 
-                        {/* Interface Admin */}
+                        {/* --- Bloc SUPPLÉMENTAIRE pour l'ADMIN --- */}
+                        
                         {isCurrentPlayerAdmin && (
-                            <div className="mt-4 text-center">
+                            <div className="mt-4 text-center border-t border-gray-700 pt-4">
                                 <button
                                     onClick={handleStartGame}
                                     disabled={!canAdminStart} 
