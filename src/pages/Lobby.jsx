@@ -1,13 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-// 🚨 CORRECTION: Les chemins d'importation pointent maintenant vers le dossier parent 'src/'
+// On remonte d'un dossier (pages -> src) pour trouver socket et audioManager
 import { socket } from "../socket"; 
 import { playMusic, stopMusic } from '../audioManager';
 
 // ==========================================================
-// Composant 1: Le Mini-Jeu "Click & Catch" (modifié)
+// Composant 1: Le Mini-Jeu "Click & Catch"
 // ==========================================================
 const ReflexGame = () => {
+    // ... (le code du mini-jeu est correct et reste le même) ...
     const [gameState, setGameState] = useState('start'); // 'start', 'wait', 'catch', 'result'
     const [startTime, setStartTime] = useState(null);
     const [reactionTime, setReactionTime] = useState(null);
@@ -145,12 +146,12 @@ export default function Lobby() {
 
     const handleReady = () => {
         // Envoi de l'ID BDD au serveur Node.js quand on clique sur "Prêt"
-        socket.emit("player_ready", { participantId: parseInt(participantId) }); // Assurons-nous que c'est un nombre
+        socket.emit("player_ready", { participantId: parseInt(participantId) }); 
     };
 
     const handleStartGame = () => {
         // Envoi de l'ID BDD de l'admin au serveur Node.js
-        socket.emit("start_game_request", { admin_id: parseInt(participantId) }); // Assurons-nous que c'est un nombre
+        socket.emit("start_game_request", { admin_id: parseInt(participantId) }); 
     };
 
 
@@ -173,6 +174,10 @@ export default function Lobby() {
             stopMusic(); 
             navigate("/quiz"); 
         });
+
+        socket.on('error_message', (message) => {
+            alert(`Erreur du serveur: ${message}`);
+        });
     }
 
     useEffect(() => {
@@ -182,26 +187,34 @@ export default function Lobby() {
         const storedParticipantId = sessionStorage.getItem("participantId");
 
         if (!storedPseudo || !storedParticipantId) {
+            console.log("Pas de session, redirection vers login...");
             navigate("/");
             return;
         }
 
         if (!socket.connected) {
+            console.log("Socket non connecté, tentative de connexion...");
             socket.connect(); 
         }
 
-        socket.on("connect", setupLobbyListeners);
+        socket.on("connect", () => {
+            console.log("Socket connecté ! ID:", socket.id);
+            setupLobbyListeners();
+        });
         
         if (socket.connected) {
+            console.log("Socket déjà connecté, setup des listeners.");
             setupLobbyListeners();
         }
         
         return () => {
+            console.log("Nettoyage des listeners du Lobby");
             socket.off("connect", setupLobbyListeners);
             socket.off("players_update");
             socket.off("game_start");
+            socket.off('error_message');
         };
-    }, [navigate]); // Retiré pseudo et participantId des dépendances
+    }, [navigate]); // 'navigate' est une dépendance stable
     
     const readyCount = players.filter((p) => p.is_ready).length;
     const currentPlayer = players.find(p => p.id === currentSocketId);
@@ -209,7 +222,7 @@ export default function Lobby() {
     const isMyStateReady = currentPlayer?.is_ready || false;
     
     const allPlayersReady = players.every(p => p.is_ready);
-    // 🚨 CORRECTION LOGIQUE: L'admin peut lancer si 2+ joueurs ET tout le monde est prêt
+    // L'admin peut lancer si 2+ joueurs ET tout le monde est prêt
     const canAdminStart = players.length >= 2 && allPlayersReady; 
 
     return (
@@ -223,7 +236,6 @@ export default function Lobby() {
             <main className="w-full max-w-4xl flex flex-col md:flex-row gap-8">
                 
                 {/* Colonne de la liste des joueurs et du contrôle (Gauche) */}
-                {/* 🚨 CORRECTION: La classe était cassée, maintenant "md:w-1/2" */}
                 <div className="md:w-1/2 w-full bg-gray-800 p-6 rounded-2xl shadow-2xl border-t-4 border-blue-500">
                     <h2 className="text-2xl font-bold mb-4 text-blue-300">
                         Joueurs connectés ({players.length})
@@ -283,11 +295,12 @@ export default function Lobby() {
                                         !canAdminStart ? "bg-red-500/50 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"
                                     }`}
                                 >
-                                    {canAdminStart ? "Lancer la Partie Maintenant !" : "Attendre 2 joueurs ou que tous soient prêts"}
+                                    {/* 🚨 LOGIQUE DE TEXTE CORRIGÉE 🚨 */}
+                                    {players.length < 2 ? "Il faut au moins 2 joueurs" : (allPlayersReady ? "Lancer la Partie Maintenant !" : "Tous les joueurs doivent être prêts")}
                                 </button>
-                                {!canAdminStart && (
+                                {!canAdminStart && players.length >= 2 && (
                                     <p className="mt-2 text-sm text-red-300">
-                                        Il faut au moins deux joueurs ET que tous les joueurs connectés soient prêts.
+                                        Tous les joueurs connectés doivent être prêts pour commencer.
                                     </p>
                                 )}
                             </div>
@@ -304,3 +317,4 @@ export default function Lobby() {
         </div>
     );
 }
+
