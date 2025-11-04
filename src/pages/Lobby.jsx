@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { socket } from "../socket"; // Assure-toi que le path est correct
+import { socket } from "./socket"; // Assure-toi que le path est correct
 import { playMusic, stopMusic } from "../audioManager"; // Assure-toi que ces fonctions existent
 
 // =======================
