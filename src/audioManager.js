@@ -6,8 +6,8 @@ gameMusic.loop = true;
 gameMusic.volume = 0.3;
 
 // 2. Son pour le minuteur (Quiz)
-// ⚠️ Assurez-vous d'avoir un fichier 'beep.mp3' dans votre dossier public/
-const timerSound = new Audio('/beep.mp3'); 
+
+const timerSound = new Audio('/tic-tac.mp3'); 
 timerSound.volume = 0.5;
 
 // Flag pour savoir si la lecture de la musique est en cours
